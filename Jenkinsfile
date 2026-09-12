@@ -71,7 +71,7 @@ pipeline {
             steps {
                 script {
                     // Requires Docker Pipeline plugin and registry credentials configured in Jenkins
-                    docker.withRegistry('https://index.docker.io/v1/', 'desktop') {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
                         def app = docker.build("${DOCKER_IMAGE}")
                         app.push()
                     }
