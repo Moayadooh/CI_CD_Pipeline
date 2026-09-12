@@ -62,25 +62,27 @@
 pipeline {
     agent any
     environment {
-        DOCKER_IMAGE = 'muayadoh/webapp'
-        VM_IP = '192.168.100.124'
-        VM_USER = 'user'
+        // Define your local registry address (Change 5000 if your registry uses a different port)
+        REGISTRY_URL = 'localhost:5000'
+        IMAGE_NAME   = 'webapp'
+        DOCKER_IMAGE = "${REGISTRY_URL}/${IMAGE_NAME}"
+        
+        VM_IP        = '192.168.100.124'
+        VM_USER      = 'user'
     }
     stages {
-        stage('Build & Push') {
+        stage('Build & Push to Local Registry') {
             steps {
-                // withCredentials cleanly injects your Docker Hub login info without exposing them in logs
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                script {
                     withEnv([
                         'DOCKER_CONTEXT=default',
-                        'DOCKER_HOST=tcp://localhost:2375', // Assumes you enabled "Expose daemon on tcp://localhost:2375" in Docker Desktop settings
-                        'DOCKER_BUILDKIT=1',               // Activates the fast, modern BuildKit engine
+                        'DOCKER_HOST=npipe:////./pipe/docker_engine',
+                        'DOCKER_BUILDKIT=1',
                         'BUILDKIT_PROGRESS=plain'
                     ]) {
                         bat """
-                        echo %DOCKER_PASS%| docker login -u %DOCKER_USER% --password-stdin
-                        docker build -t %DOCKER_IMAGE% .
-                        docker push %DOCKER_IMAGE%
+                        docker build -t %DOCKER_IMAGE%:latest .
+                        docker push %DOCKER_IMAGE%:latest
                         """
                     }
                 }
@@ -90,10 +92,11 @@ pipeline {
             steps {
                 sshagent(['vm-ssh-creds']) {
                     bat """
-                    ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "docker pull ${DOCKER_IMAGE} && docker stop webapp || true && docker rm webapp || true && docker run -d -p 8080:8080 --name webapp ${DOCKER_IMAGE}"
+                    ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "docker pull ${DOCKER_IMAGE}:latest && docker stop webapp || true && docker rm webapp || true && docker run -d -p 8080:8080 --name webapp ${DOCKER_IMAGE}:latest"
                     """
                 }
             }
         }
     }
 }
+
