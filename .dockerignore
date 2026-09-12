@@ -1,0 +1,21 @@
+# Development and Git
+.git/
+.gitignore
+.vs/
+.vscode/
+
+# Build results and packages
+**/bin/
+**/obj/
+**/out/
+**/packages/
+
+# Local configuration and user files
+*.user
+*.suo
+appsettings.Development.json
+.env
+
+# Docker-related
+.dockerignore
+Dockerfile
