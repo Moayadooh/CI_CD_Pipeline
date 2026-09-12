@@ -70,20 +70,22 @@ pipeline {
         stage('Build & Push') {
             steps {
                 script {
-                    // Requires Docker Pipeline plugin and registry credentials configured in Jenkins
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-                        def app = docker.build("${DOCKER_IMAGE}")
-                        app.push()
+                    // Injecting DOCKER_CONTEXT=default forces Docker to bypass the missing temporary context folder
+                    withEnv(['DOCKER_CONTEXT=default']) {
+                        docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
+                            def app = docker.build("${DOCKER_IMAGE}")
+                            app.push()
+                        }
                     }
                 }
             }
         }
         stage('Deploy to VM') {
             steps {
-                // Requires SSH Agent plugin and VM credentials configured in Jenkins
+                // Changed from 'sh' to 'bat' because your Jenkins agent runs on Windows
                 sshagent(['vm-ssh-creds']) {
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} 'docker pull ${DOCKER_IMAGE} && docker stop webapp || true && docker rm webapp || true && docker run -d -p 8080:8080 --name webapp ${DOCKER_IMAGE}'
+                    bat """
+                    ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "docker pull ${DOCKER_IMAGE} && docker stop webapp || true && docker rm webapp || true && docker run -d -p 8080:8080 --name webapp ${DOCKER_IMAGE}"
                     """
                 }
             }
