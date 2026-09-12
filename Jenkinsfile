@@ -62,8 +62,8 @@
 pipeline {
     agent any
     environment {
-        DOCKER_IMAGE = 'muayadoh/webapp:test'
-        VM_IP = '192.168.100.55'
+        DOCKER_IMAGE = 'muayadoh/webapp'
+        VM_IP = '192.168.100.124'
         VM_USER = 'user'
     }
     stages {
