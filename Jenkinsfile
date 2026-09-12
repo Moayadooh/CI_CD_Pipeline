@@ -69,20 +69,25 @@ pipeline {
     stages {
         stage('Build & Push') {
             steps {
-                script {
-                    // Injecting DOCKER_CONTEXT=default forces Docker to bypass the missing temporary context folder
-                    withEnv(['DOCKER_CONTEXT=default']) {
-                        docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-                            def app = docker.build("${DOCKER_IMAGE}")
-                            app.push()
-                        }
+                // withCredentials cleanly injects your Docker Hub login info without exposing them in logs
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    withEnv([
+                        'DOCKER_CONTEXT=default',
+                        'DOCKER_HOST=tcp://localhost:2375', // Assumes you enabled "Expose daemon on tcp://localhost:2375" in Docker Desktop settings
+                        'DOCKER_BUILDKIT=1',               // Activates the fast, modern BuildKit engine
+                        'BUILDKIT_PROGRESS=plain'
+                    ]) {
+                        bat """
+                        echo %DOCKER_PASS%| docker login -u %DOCKER_USER% --password-stdin
+                        docker build -t %DOCKER_IMAGE% .
+                        docker push %DOCKER_IMAGE%
+                        """
                     }
                 }
             }
         }
         stage('Deploy to VM') {
             steps {
-                // Changed from 'sh' to 'bat' because your Jenkins agent runs on Windows
                 sshagent(['vm-ssh-creds']) {
                     bat """
                     ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "docker pull ${DOCKER_IMAGE} && docker stop webapp || true && docker rm webapp || true && docker run -d -p 8080:8080 --name webapp ${DOCKER_IMAGE}"
