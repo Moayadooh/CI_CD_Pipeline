@@ -1,3 +1,4 @@
+// IIS
 // pipeline {
 //     agent any
 
@@ -57,12 +58,11 @@
 //     }
 // }
 
-
-
+// Docker
 pipeline {
     agent any
     environment {
-        DOCKER_IMAGE = 'muayadoh/webapp'
+        DOCKER_IMAGE = 'muayadoh/webapp:test'
         VM_IP = '192.168.100.124'
         VM_USER = 'user'
     }
